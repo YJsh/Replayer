@@ -82,6 +82,7 @@ class Recorder(threading.Thread):
         super(Recorder, self).__init__()
         self.process = process
         self.minitouchEvents = []
+        self.status = True
 
     def run(self):
         try:
@@ -98,6 +99,8 @@ class Recorder(threading.Thread):
             line = self.process.stdout.readline()
             if not line:
                 break
+            if not self.status:
+                continue
             if not line.startswith("[") or deviceEvent not in line:
                 continue
             print(line.split())
@@ -163,11 +166,16 @@ class Recorder(threading.Thread):
                     info.isChanged = False
                 self.minitouchEvents.append("c\n")
 
+    def changeStatus(self):
+        self.status = not self.status
+
 
 if __name__ == "__main__":
     with ExitProcess(["adb", "shell", "getevent", "-t"],
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
         t = Recorder(p.process)
         t.start()
+        time.sleep(1)
+        t.test()
         time.sleep(10)
         print(t.minitouchEvents)

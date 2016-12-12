@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
+import subprocess
 from PyQt4 import QtCore, QtGui
-
+from events import Recorder
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -96,15 +97,38 @@ class Ui_MainWindow(object):
 
     def doStart(self):
         self.ctrl.setText(_translate("MainWindow", "暂停", None))
+        QtCore.QObject.disconnect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
         QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doPause)
+        self.recordProcess = subprocess.Popen(
+                ["adb", "shell", "getevent", "-t"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.recordThread = Recorder(self.recordProcess)
+        self.recordThread.start()
 
     def doPause(self):
+        print("doPause")
         self.ctrl.setText(_translate("MainWindow", "继续", None))
-        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
+        QtCore.QObject.disconnect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doPause)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doContinue)
+        self.recordThread.changeStatus()
+
+    def doContinue(self):
+        print("doContinue")
+        self.ctrl.setText(_translate("MainWindow", "暂停", None))
+        QtCore.QObject.disconnect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doContinue)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doPause)
+        self.recordThread.changeStatus()
 
     def doStop(self):
         self.ctrl.setText(_translate("MainWindow", "开始", None))
+        QtCore.QObject.disconnect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doContinue)
+        QtCore.QObject.disconnect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doPause)
         QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
+        self.recordProcess.kill()
+        self.scriptWidget.clear()
+        for line in self.recordThread.minitouchEvents:
+            item = QtGui.QListWidgetItem(line[:-1])
+            self.scriptWidget.addItem(item)
 
     def chooseDir(self, dirPath=""):
         dirPath = dirPath or QtGui.QFileDialog.getExistingDirectory()
