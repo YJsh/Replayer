@@ -130,6 +130,7 @@ class Ui_MainWindow(object):
         for line in self.recordThread.minitouchEvents:
             item = QtGui.QListWidgetItem(line[:-1])
             self.scriptWidget.addItem(item)
+        self.saveScript("".join(self.recordThread.minitouchEvents))
 
     def doReplay(self):
         events = []
@@ -146,17 +147,19 @@ class Ui_MainWindow(object):
             self.dirLineEdit.setText(dirPath)
             self.showFileList(dirPath)
 
-    def saveScript(self):
-        fileName = QtGui.QFileDialog.getSaveFileName()
-        print(fileName)
+    def saveScript(self, context):
+        fileName = QtGui.QFileDialog.getSaveFileName(filter=".md")
+        with open(str(fileName), "w") as f:
+            f.write(context)
 
     def showFileList(self, dirPath):
         self.fileListWidget.clear()
         for path in os.listdir(dirPath):
             if os.path.isdir(path):
                 continue
-            item = QtGui.QListWidgetItem(path)
-            self.fileListWidget.addItem(item)
+            if str(path).endswith(".md"):
+                item = QtGui.QListWidgetItem(path)
+                self.fileListWidget.addItem(item)
 
     def chooseFile(self):
         items = self.fileListWidget.selectedItems()
