@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import subprocess
+import time
 import threading
 
 import const
@@ -78,7 +79,7 @@ class SlotInfo(object):
 class Recorder(threading.Thread):
 
     def __init__(self, process):
-        super(Recorder, self)
+        super(Recorder, self).__init__()
         self.process = process
         self.minitouchEvents = []
 
@@ -87,7 +88,7 @@ class Recorder(threading.Thread):
             self.recordEvents()
         except Exception, e:
             print(e)
-        print("录制结束")
+        print("end")
 
     def recordEvents(self):
         posInfo = {0: SlotInfo()}
@@ -161,3 +162,12 @@ class Recorder(threading.Thread):
                             (idx, info.x, info.y, info.pressure))
                     info.isChanged = False
                 self.minitouchEvents.append("c\n")
+
+
+if __name__ == "__main__":
+    with ExitProcess(["adb", "shell", "getevent", "-t"],
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE) as p:
+        t = Recorder(p.process)
+        t.start()
+        time.sleep(10)
+        print(t.minitouchEvents)
