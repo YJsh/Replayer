@@ -76,7 +76,8 @@ class Ui_MainWindow(object):
         self.dirLayout.addLayout(self.dirChooseLayout)
 
         self.retranslateUi(MainWindow)
-        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.start)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
+        QtCore.QObject.connect(self.stop, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStop)
         QtCore.QObject.connect(
             self.dirPushButton,
             QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -93,13 +94,17 @@ class Ui_MainWindow(object):
         self.dirPushButton.setText(_translate("MainWindow", "选择", None))
         self.chooseDir("E:\workspace\ScriptRecord")
 
-    def start(self):
+    def doStart(self):
         self.ctrl.setText(_translate("MainWindow", "暂停", None))
-        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.pause)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doPause)
 
-    def pause(self):
+    def doPause(self):
         self.ctrl.setText(_translate("MainWindow", "继续", None))
-        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.start)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
+
+    def doStop(self):
+        self.ctrl.setText(_translate("MainWindow", "开始", None))
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
 
     def chooseDir(self, dirPath=""):
         dirPath = dirPath or QtGui.QFileDialog.getExistingDirectory()
