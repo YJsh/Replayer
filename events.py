@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import socket
 import subprocess
 import time
 import threading
@@ -169,6 +170,53 @@ class Recorder(threading.Thread):
     def changeStatus(self):
         self.status = not self.status
 
+
+class Replayer(threading.Thread):
+    def __init__(self, minitouchEvents):
+        super(Replayer, self).__init__()
+        self.minitouchEvents = minitouchEvents
+        print(minitouchEvents)
+
+    def run(self):
+        self.setPort()
+        with self.runMinitouch() as p:
+            p.process.stdout.readline()
+            address = ("127.0.0.1", 1111)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(address)
+            data = s.recv(512)
+            print "data", data
+            radioX, radioY = self.calcScreenRadio(data)
+            print(radioX, radioY)
+            for event in self.minitouchEvents:
+                cmd = event
+                print cmd
+                if cmd.startswith("sleep"):
+                    time.sleep(float(cmd.split(" ")[1]))
+                else:
+                    if cmd.startswith("d") or cmd.startswith("m"):
+                        if radioX != 1 or radioY != 1:
+                            op, slot, x, y, pressure = cmd.split(" ")
+                            x = int(int(x) * radioX)
+                            y = int(int(y) * radioY)
+                            cmd = "%s %s %d %d %s" % (op, slot, x, y, pressure)
+                    s.send(cmd + "\n")
+            time.sleep(1)
+            s.close()
+
+    def runMinitouch(self):
+        return ExitProcess(["adb", "shell", "/data/local/tmp/minitouch"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def setPort(self):
+        subprocess.call(["adb", "forward", "tcp:1111", "localabstract:minitouch"],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def calcScreenRadio(self, data):
+        return 1, 1
+#          _, slotNum, maxX, maxY, maxPressure = data.split("\n")[1].split(" ")
+        #  screenX, screenY = getRawShape()
+        #  return float(maxX) / float(screenX), float(maxY) / float(screenY)
 
 if __name__ == "__main__":
     with ExitProcess(["adb", "shell", "getevent", "-t"],

@@ -2,7 +2,7 @@
 import os
 import subprocess
 from PyQt4 import QtCore, QtGui
-from events import Recorder
+from events import Recorder, Replayer
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -79,6 +79,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStart)
         QtCore.QObject.connect(self.stop, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doStop)
+        QtCore.QObject.connect(self.replay, QtCore.SIGNAL(_fromUtf8("clicked()")), self.doReplay)
         QtCore.QObject.connect(
             self.dirPushButton,
             QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -129,6 +130,14 @@ class Ui_MainWindow(object):
         for line in self.recordThread.minitouchEvents:
             item = QtGui.QListWidgetItem(line[:-1])
             self.scriptWidget.addItem(item)
+
+    def doReplay(self):
+        events = []
+        for index in xrange(self.scriptWidget.count()):
+            events.append(str(self.scriptWidget.item(index).text()))
+
+        replayThread = Replayer(events)
+        replayThread.start()
 
     def chooseDir(self, dirPath=""):
         dirPath = dirPath or QtGui.QFileDialog.getExistingDirectory()
