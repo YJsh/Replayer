@@ -34,13 +34,9 @@ class Ui_MainWindow(object):
         self.ctrlLayout = QtGui.QHBoxLayout()
         self.ctrlLayout.setObjectName(_fromUtf8("ctrlLayout"))
 
-        self.start = QtGui.QPushButton(self.ctrlWidget)
-        self.start.setObjectName(_fromUtf8("start"))
-        self.ctrlLayout.addWidget(self.start)
-
-        self.pause = QtGui.QPushButton(self.ctrlWidget)
-        self.pause.setObjectName(_fromUtf8("pause"))
-        self.ctrlLayout.addWidget(self.pause)
+        self.ctrl = QtGui.QPushButton(self.ctrlWidget)
+        self.ctrl.setObjectName(_fromUtf8("ctrl"))
+        self.ctrlLayout.addWidget(self.ctrl)
 
         self.stop = QtGui.QPushButton(self.ctrlWidget)
         self.stop.setObjectName(_fromUtf8("stop"))
@@ -80,6 +76,7 @@ class Ui_MainWindow(object):
         self.dirLayout.addLayout(self.dirChooseLayout)
 
         self.retranslateUi(MainWindow)
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.start)
         QtCore.QObject.connect(
             self.dirPushButton,
             QtCore.SIGNAL(_fromUtf8("clicked()")),
@@ -90,12 +87,19 @@ class Ui_MainWindow(object):
             self.chooseFile)
 
     def retranslateUi(self, MainWindow):
-        self.start.setText(_translate("MainWindow", "开始", None))
-        self.pause.setText(_translate("MainWindow", "暂停", None))
+        self.ctrl.setText(_translate("MainWindow", "开始", None))
         self.stop.setText(_translate("MainWindow", "结束", None))
         self.replay.setText(_translate("MainWindow", "回放", None))
         self.dirPushButton.setText(_translate("MainWindow", "选择", None))
         self.chooseDir("E:\workspace\ScriptRecord")
+
+    def start(self):
+        self.ctrl.setText(_translate("MainWindow", "暂停", None))
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.pause)
+
+    def pause(self):
+        self.ctrl.setText(_translate("MainWindow", "继续", None))
+        QtCore.QObject.connect(self.ctrl, QtCore.SIGNAL(_fromUtf8("clicked()")), self.start)
 
     def chooseDir(self, dirPath=""):
         dirPath = dirPath or QtGui.QFileDialog.getExistingDirectory()
