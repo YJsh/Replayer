@@ -2,6 +2,7 @@
 import sys
 from PyQt4 import QtCore, QtGui
 from device import DeviceMgr
+from recorder import Recorder
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -146,18 +147,23 @@ class DeviceWidget(QtGui.QWidget):
 
         self.connectSignal()
         self.initDevices()
+        self.initRecorder()
 
     def connectSignal(self):
         connect = QtCore.QObject.connect
         connect(self.addButton, signal("clicked()"), self.addDevice)
         connect(self.connectButton, signal("clicked()"), self.connectDevice)
         connect(self.ctrlButton, signal("clicked()"), self.startRecord)
+        connect(self.stopButton, signal("clicked()"), self.stopRecord)
 
     def initDevices(self):
         self.deviceMgr = DeviceMgr()
         self.deviceMgr.initDevices()
         for device in self.deviceMgr.getAllDevices():
             self.insertDevice(device)
+
+    def initRecorder(self):
+        self.recorder = Recorder()
 
     def addDevice(self):
         ip = str(self.ipEdit.text())
@@ -178,14 +184,20 @@ class DeviceWidget(QtGui.QWidget):
         if result:
             print(device.getDeviceEvent())
             print(device.getDeviceResolution())
+            self.recorder.setDevice(device)
         else:
             print("can not connect")
 
     def startRecord(self):
-        pass
+        self.recorder.start()
+
+    def stopRecord(self):
+        self.recorder.stop()
+        print(self.recorder.minitouchEvents)
 
 
 class ScriptWidget(QtGui.QWidget):
+
     def __init__(self, parent=None):
         super(ScriptWidget, self).__init__(parent)
         self.scriptLayout = QtGui.QHBoxLayout(self)

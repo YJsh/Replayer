@@ -42,7 +42,7 @@ class Device(object):
             p = re.compile(r"0035.*max (\d+)")
             for line in stdout.split("\r\n"):
                 if "/dev/input/event" in line:
-                    event = line.split(" ")[-1]
+                    event = line.split(" ")[-1][:-1]
                     continue
                 if p.search(line):
                     break

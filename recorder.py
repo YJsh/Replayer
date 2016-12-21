@@ -1,4 +1,5 @@
 # -*- coding: gbk -*-
+import subprocess
 import threading
 import const
 
@@ -55,9 +56,8 @@ class SlotInfo(object):
 
 class Recorder(threading.Thread):
 
-    def __init__(self, process, device):
+    def __init__(self, device=None):
         super(Recorder, self).__init__()
-        self.process = process
         self.minitouchEvents = []
         self.status = True
         self.device = device
@@ -71,38 +71,47 @@ class Recorder(threading.Thread):
     def getMinitouchEvents(self):
         return self.minitouchEvents
 
-    def finishProcess(self):
+    def stop(self):
         self.process.kill()
 
     def run(self):
         try:
+            deviceId = self.device.getDeviceId()
+            deviceEvent = self.device.getDeviceEvent()
+            print(deviceId, deviceEvent)
+            self.process = subprocess.Popen(
+                    "adb -s %s shell getevent -t %s" % (deviceId, deviceEvent),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("run")
             self.recordEvents()
         except Exception, e:
             print(e)
         print("end")
+        self.process.kill()
 
     def recordEvents(self):
         posInfo = {0: SlotInfo()}
         slot = 0
         lastStamp = 0
         deviceEvent = self.device.getDeviceEvent()
+        print(deviceEvent)
+        print("status: ", self.status)
         while True:
             line = self.process.stdout.readline()
             if not line:
                 break
             if not self.status:
                 continue
-            if not line.startswith("[") or deviceEvent not in line:
-                continue
+            #  if not line.startswith("[") or deviceEvent not in line:
+            #      continue
             print(line.split())
 
-            _, stamp, device, eventType, op, value = line.split()
+            _, stamp, eventType, op, value = line.split()
 
+            #  device = device[:-1]
+            stamp = float(stamp[:-1])
             if not lastStamp:
                 lastStamp = stamp
-
-            device = device[:-1]
-            stamp = float(stamp[:-1])
             eventType = int(eventType, 16)
             op = int(op, 16)
 
