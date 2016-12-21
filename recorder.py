@@ -65,6 +65,9 @@ class Recorder(threading.Thread):
     def changeStatus(self):
         self.status = not self.status
 
+    def setDevice(self, device):
+        self.device = device
+
     def getMinitouchEvents(self):
         return self.minitouchEvents
 

@@ -1,4 +1,4 @@
-# -*- coding: gbk -*-
+# -*- coding: utf-8 -*-
 import re
 import subprocess
 from exitProcess import ExitProcess
@@ -14,8 +14,17 @@ class Device(object):
         self.deviceResolution = deviceResolution
         self.deviceIp = deviceIp
 
+    def connect(self):
+        stdout = subprocess.check_output("adb connect %s:%d" % self.deviceIp)
+        print(stdout)
+        if stdout.startswith("unable to connect to"):
+            raise RuntimeError("connect failed")
+        self.deviceId = "%s:%d" % self.deviceIp
+        #  self.getDeviceId()
+        return True
+
     def getDeviceId(self):
-        """»ñÈ¡Éè±¸±àºÅ"""
+        """è·å–è®¾å¤‡ç¼–å·"""
         if not self.deviceId:
             stdout = subprocess.check_output("adb devices", shell=True)
             pattern = re.compile("([\w\d:.]+)\s+device\s*$")
@@ -26,26 +35,22 @@ class Device(object):
         return self.deviceId
 
     def getDeviceEvent(self):
-        """»ñÈ¡Éè±¸´¥ÆÁÊÂ¼ş£¬ĞèÒªÓÃ»§Ê¹ÓÃ´¥ÆÁ"""
+        """è·å–è®¾å¤‡è§¦å±äº‹ä»¶"""
         if not self.deviceEvent:
-            with ExitProcess(
-                    ["adb", "shell", "getevent"], stdout=subprocess.PIPE) as p:
-                events = {}
-                num = 0
-                while True:
-                    num += 1
-                    line = p.process.stdout.readline()
-                    if not line.startswith("/dev/input/event"):
-                        continue
-                    index = line.split(" ")[0][-2]
-                    events[index] = events.get(index, 0) + 1
-                    if (events[index] << 2) > num:
-                        self.deviceEvent = "/dev/input/event" + index
-                        break
+            stdout = subprocess.check_output(
+                    "adb -s %s shell getevent -p" % self.deviceId, shell=True)
+            p = re.compile(r"0035.*max (\d+)")
+            for line in stdout.split("\r\n"):
+                if "/dev/input/event" in line:
+                    event = line.split(" ")[-1]
+                    continue
+                if p.search(line):
+                    break
+            self.deviceEvent = event
         return self.deviceEvent
 
     def getDeviceResolution(self):
-        """»ñÈ¡Éè±¸´¥ÆÁ·Ö±æÂÊ"""
+        """è·å–è®¾å¤‡è§¦å±åˆ†è¾¨ç‡"""
         if not self.deviceResolution:
             stdout = subprocess.check_output(
                 "adb -s %s shell getevent -p %s" % (
@@ -58,24 +63,24 @@ class Device(object):
         return self.deviceResolution
 
     def setTCPPort(self):
-        """ÉèÖÃ¶Ë¿ÚÓ³Éä"""
+        """è®¾ç½®ç«¯å£æ˜ å°„"""
         subprocess.call("adb -s %s forward tcp:1111 localabstract:minitouch"
                         % self.deviceId,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def startMinitouch(self):
-        """Æô¶¯minitouch"""
+        """å¯åŠ¨minitouch"""
         return ExitProcess(
             ["adb", "-s", self.deviceId,
                     "shell", "/data/local/tmp/minitouch"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def pushMinitouch(self):
-        """»ñÈ¡mititouch"""
+        """è·å–mititouch"""
         pass
 
     def getABI(self):
-        """»ñÈ¡ÏµÍ³ABI"""
+        """è·å–ç³»ç»ŸABI"""
         pass
 
 
@@ -98,8 +103,9 @@ class DeviceMgr(object):
             self.devices.append(Device(deviceId=deviceId))
 
     def addDevice(self, ip, port):
-        device = Device(ip=(ip, port))
+        device = Device(deviceIp=(ip, port))
         self.devices.append(device)
+        return device
 
     def findDeviceById(self, deviceId):
         for device in self.devices:
@@ -108,7 +114,12 @@ class DeviceMgr(object):
         return None
 
     def findDeviceByIp(self, deviceIp):
+        if type(deviceIp) == str:
+            deviceIp = deviceIp.split(":")
+            deviceIp = (deviceIp[0], int(deviceIp[1]))
+        print(deviceIp)
         for device in self.devices:
+            print(device.deviceIp)
             if device.deviceIp == deviceIp:
                 return device
         return None
@@ -117,7 +128,7 @@ class DeviceMgr(object):
 if __name__ == "__main__":
     mgr = DeviceMgr()
     mgr.initDevices()
-    devices = mgr.getDevices()
+    devices = mgr.getAllDevices()
     print(devices)
     d = devices[0]
     print(d.getDeviceId())
