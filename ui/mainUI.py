@@ -42,24 +42,12 @@ class Ui_MainWindow(object):
         self.navigation.addEntry("脚本", self.switch2ScriptPage)
         self.navigationLayout.addWidget(self.navigation)
 
+        contextRect = QtCore.QRect(105, 0, 530, 480)
         self.deviceWidget = DeviceWidget(self.centralWidget)
-        self.deviceWidget.setGeometry(QtCore.QRect(105, 0, 530, 480))
+        self.deviceWidget.setGeometry(contextRect)
         self.scriptWidget = ScriptWidget(self.centralWidget)
-        self.scriptWidget.setGeometry(QtCore.QRect(105, 0, 530, 480))
-
-        #  self.contextWidget = QtGui.QWidget(self.centralWidget)
-        #  self.contextWidget.setObjectName(_fromUtf8("contextWidget"))
-        #  self.contextWidget.setGeometry(QtCore.QRect(200, 0, 100, 480))
-
-        #  self.contextLayout = QtGui.QHBoxLayout(self.contextWidget)
-        #  self.contextLayout.setObjectName(_fromUtf8("contextLayout"))
-        #  self.contextLayout.setMargin(0)
-
-        #  self.deviceWidget = DeviceWidget(self.contextWidget)
-        #  self.scriptWidget = ScriptWidget(self.contextWidget)
-        #  self.scriptWidget.hide()
-        #  self.contextLayout.addWidget(self.deviceWidget)
-        #  self.contextLayout.addWidget(self.scriptWidget)
+        self.scriptWidget.setGeometry(contextRect)
+        self.scriptWidget.hide()
 
     def switch2DevicePage(self):
         self.scriptWidget.hide()
@@ -102,6 +90,30 @@ class DeviceWidget(QtGui.QWidget):
 class ScriptWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super(ScriptWidget, self).__init__(parent)
+        self.scriptLayout = QtGui.QHBoxLayout(self)
+
+        self.scriptWidget = QtGui.QListWidget(self)
+        self.scriptWidget.setObjectName(_fromUtf8("scriptWidget"))
+        self.scriptLayout.addWidget(self.scriptWidget)
+
+        self.dirWidget = QtGui.QWidget(self)
+        self.dirWidget.setObjectName(_fromUtf8("dirWidget"))
+        self.dirWidget.setGeometry(QtCore.QRect(20, 190, 340, 220))
+
+        self.dirLayout = QtGui.QVBoxLayout(self.dirWidget)
+        self.fileListWidget = QtGui.QListWidget(self.dirWidget)
+        self.fileListWidget.setObjectName(_fromUtf8("fileListWidget"))
+        self.dirLayout.addWidget(self.fileListWidget)
+
+        self.dirChooseLayout = QtGui.QHBoxLayout()
+        self.dirChooseLayout.setObjectName(_fromUtf8("dirChooseLayout"))
+        self.dirPushButton = QtGui.QPushButton(self.dirWidget)
+        self.dirPushButton.setObjectName(_fromUtf8("dirPushButton"))
+        self.dirChooseLayout.addWidget(self.dirPushButton)
+        self.dirLineEdit = QtGui.QLineEdit(self.dirWidget)
+        self.dirLineEdit.setObjectName(_fromUtf8("dirLineEdit"))
+        self.dirChooseLayout.addWidget(self.dirLineEdit)
+        self.dirLayout.addLayout(self.dirChooseLayout)
 
 
 def run():
