@@ -3,6 +3,7 @@ import sys
 from PyQt4 import QtCore, QtGui
 from device import DeviceMgr
 from recorder import Recorder
+from replayer import Replayer
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -10,6 +11,8 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
+connect = QtCore.QObject.connect
+disconnect = QtCore.QObject.disconnect
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
 
@@ -29,8 +32,8 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(640, 480)
-        MainWindow.setWindowFlags(
-                QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
+        #  MainWindow.setWindowFlags(
+        #          QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
 
         self.centralWidget = QtGui.QWidget(MainWindow)
         self.centralWidget.setObjectName(_fromUtf8("centralwidget"))
@@ -108,8 +111,11 @@ class DeviceWidget(QtGui.QWidget):
 
         self.ctrlButton = QtGui.QPushButton(_fromUtf8("开始"), self)
         self.stopButton = QtGui.QPushButton(_fromUtf8("结束"), self)
+        self.stopButton.setEnabled(False)
         self.saveButton = QtGui.QPushButton(_fromUtf8("保存"), self)
+        self.saveButton.setEnabled(False)
         self.replayButton = QtGui.QPushButton(_fromUtf8("回放"), self)
+        self.replayButton.setEnabled(False)
         self.ctrlLayput = QtGui.QVBoxLayout()
         self.ctrlLayput.addWidget(self.ctrlButton)
         self.ctrlLayput.addWidget(self.stopButton)
@@ -147,23 +153,20 @@ class DeviceWidget(QtGui.QWidget):
 
         self.connectSignal()
         self.initDevices()
-        self.initRecorder()
 
     def connectSignal(self):
-        connect = QtCore.QObject.connect
         connect(self.addButton, signal("clicked()"), self.addDevice)
         connect(self.connectButton, signal("clicked()"), self.connectDevice)
-        connect(self.ctrlButton, signal("clicked()"), self.startRecord)
-        connect(self.stopButton, signal("clicked()"), self.stopRecord)
+        connect(self.ctrlButton, signal("clicked()"), self.doStart)
+        connect(self.stopButton, signal("clicked()"), self.doStop)
+        connect(self.saveButton, signal("clicked()"), self.doSave)
+        connect(self.replayButton, signal("clicked()"), self.doReplay)
 
     def initDevices(self):
         self.deviceMgr = DeviceMgr()
         self.deviceMgr.initDevices()
         for device in self.deviceMgr.getAllDevices():
             self.insertDevice(device)
-
-    def initRecorder(self):
-        self.recorder = Recorder()
 
     def addDevice(self):
         ip = str(self.ipEdit.text())
@@ -184,16 +187,57 @@ class DeviceWidget(QtGui.QWidget):
         if result:
             print(device.getDeviceEvent())
             print(device.getDeviceResolution())
-            self.recorder.setDevice(device)
+            self.device = device
         else:
             print("can not connect")
 
-    def startRecord(self):
+    def doStart(self):
+        self.replayButton.setEnabled(False)
+        self.saveButton.setEnabled(False)
+        if not self.device:
+            return
+        self.recorder = Recorder(self.device)
+        self.ctrlButton.setText(_translate("MainWindow", "暂停", None))
+        disconnect(self.ctrlButton, signal("clicked()"), self.doStart)
+        connect(self.ctrlButton, signal("clicked()"), self.doPause)
         self.recorder.start()
+        self.stopButton.setEnabled(True)
 
-    def stopRecord(self):
+    def doPause(self):
+        self.ctrlButton.setText(_translate("MainWindow", "继续", None))
+        disconnect(self.ctrlButton, signal("clicked()"), self.doPause)
+        connect(self.ctrlButton, signal("clicked()"), self.doContinue)
+        self.recorder.changeStatus()
+
+    def doContinue(self):
+        self.ctrlButton.setText(_translate("MainWindow", "暂停", None))
+        disconnect(self.ctrlButton, signal("clicked()"), self.doContinue)
+        connect(self.ctrlButton, signal("clicked()"), self.doPause)
+        self.recorder.changeStatus()
+
+    def doStop(self):
+        self.stopButton.setEnabled(False)
+        self.ctrlButton.setText(_translate("MainWindow", "开始", None))
+        disconnect(self.ctrlButton, signal("clicked()"), self.doContinue)
+        disconnect(self.ctrlButton, signal("clicked()"), self.doPause)
+        connect(self.ctrlButton, signal("clicked()"), self.doStart)
         self.recorder.stop()
-        print(self.recorder.minitouchEvents)
+        self.events = self.recorder.getMinitouchEvents()
+        print(self.events)
+        self.saveButton.setEnabled(True)
+        self.replayButton.setEnabled(True)
+
+    def doSave(self):
+        if not self.events:
+            return
+        fileName = QtGui.QFileDialog.getSaveFileName(filter=".script")
+        if fileName:
+            with open(str(fileName), "w") as f:
+                f.write("".join(self.events))
+
+    def doReplay(self):
+        self.replayer = Replayer(self.events, self.device)
+        self.replayer.start()
 
 
 class ScriptWidget(QtGui.QWidget):

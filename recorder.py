@@ -94,6 +94,7 @@ class Recorder(threading.Thread):
         slot = 0
         lastStamp = 0
         deviceEvent = self.device.getDeviceEvent()
+        deviceX, deviceY = self.device.getDeviceResolution()
         print(deviceEvent)
         print("status: ", self.status)
         while True:
@@ -102,13 +103,10 @@ class Recorder(threading.Thread):
                 break
             if not self.status:
                 continue
-            #  if not line.startswith("[") or deviceEvent not in line:
-            #      continue
             print(line.split())
 
             _, stamp, eventType, op, value = line.split()
 
-            #  device = device[:-1]
             stamp = float(stamp[:-1])
             if not lastStamp:
                 lastStamp = stamp
@@ -134,9 +132,9 @@ class Recorder(threading.Thread):
             elif op == const.ABS_MT_PRESSURE:
                 posInfo[slot].pressure = value
             elif op == const.ABS_MT_POSITION_X:
-                posInfo[slot].x = value
+                posInfo[slot].x = value / deviceX
             elif op == const.ABS_MT_POSITION_Y:
-                posInfo[slot].y = value
+                posInfo[slot].y = value / deviceY
             elif op == const.SYN_REPORT:
                 delay = stamp - lastStamp
                 lastStamp = stamp
@@ -150,11 +148,11 @@ class Recorder(threading.Thread):
                     elif info.key == const.KEY_DOWN:
                         info.key = const.KEY_NONE
                         self.minitouchEvents.append(
-                            "d %d %d %d %d\n" % (
+                            "d %d %f %f %d\n" % (
                                 idx, info.x, info.y, info.pressure))
                     else:
                         self.minitouchEvents.append(
-                            "m %d %d %d %d\n" % (
+                            "m %d %f %f %d\n" % (
                                 idx, info.x, info.y, info.pressure))
                     info.isChanged = False
                 self.minitouchEvents.append("c\n")

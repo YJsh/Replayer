@@ -13,6 +13,7 @@ class Device(object):
         self.deviceEvent = deviceEvent
         self.deviceResolution = deviceResolution
         self.deviceIp = deviceIp
+        self.deviceABI = None
 
     def connect(self):
         stdout = subprocess.check_output("adb connect %s:%d" % self.deviceIp)
@@ -59,13 +60,13 @@ class Device(object):
             yPattern = re.compile(r"0036.*max (\d+)")
             x = xPattern.search(stdout).group(1)
             y = yPattern.search(stdout).group(1)
-            self.deviceResolution = (x, y)
+            self.deviceResolution = (float(x), float(y))
         return self.deviceResolution
 
-    def setTCPPort(self):
+    def setTCPPort(self, port):
         """设置端口映射"""
-        subprocess.call("adb -s %s forward tcp:1111 localabstract:minitouch"
-                        % self.deviceId,
+        subprocess.call("adb -s %s forward tcp:%d localabstract:minitouch"
+                        % (self.deviceId, port),
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def startMinitouch(self):
@@ -77,11 +78,22 @@ class Device(object):
 
     def pushMinitouch(self):
         """获取mititouch"""
-        pass
+        if not self.deviceABI:
+            self.getABI()
+        print(self.deviceABI)
+        subprocess.call("adb -s %s push libs/%s/minitouch /data/local/tmp/"
+                        % (self.deviceId, self.deviceABI))
+        subprocess.call("adb -s %s shell chmod 777 /data/local/tmp/minitouch"
+                        % self.deviceId)
 
     def getABI(self):
         """获取系统ABI"""
-        pass
+        if not self.deviceABI:
+            stdout = subprocess.check_output(
+                    "adb -s %s shell getprop ro.product.cpu.abi"
+                    % self.deviceId)
+            self.deviceABI = stdout[0:stdout.find("\r")]
+        return self.deviceABI
 
 
 class DeviceMgr(object):
