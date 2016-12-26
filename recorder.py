@@ -1,4 +1,5 @@
 # -*- coding: gbk -*-
+import re
 import subprocess
 import threading
 import const
@@ -97,15 +98,16 @@ class Recorder(threading.Thread):
         deviceX, deviceY = self.device.getDeviceResolution()
         print(deviceEvent)
         print("status: ", self.status)
+        pattern = re.compile(r"\[\s*([\d\.]+)\s*\]\s+(\w+)\s+(\w+)\s+(\w+)")
         while True:
             line = self.process.stdout.readline()
             if not line:
                 break
             if not self.status:
                 continue
-            print(line.split())
 
-            _, stamp, eventType, op, value = line.split()
+            result = pattern.match(line)
+            stamp, eventType, op, value = result.groups()
 
             stamp = float(stamp[:-1])
             if not lastStamp:
@@ -120,6 +122,43 @@ class Recorder(threading.Thread):
             else:
                 value = int(value, 16)
 
+            if op == const.ABS_MT_TRACKING_ID:
+                if value == int("ffffffff", 16):
+                    posInfo[slot].key = const.KEY_UP
+                else:
+                    posInfo[slot].key = const.KEY_DOWN
+            elif op == const.ABS_MT_SLOT:
+                slot = value
+                if slot not in posInfo:
+                    posInfo[slot] = SlotInfo()
+            elif op == const.ABS_MT_PRESSURE:
+                posInfo[slot].pressure = value
+            elif op == const.ABS_MT_POSITION_X:
+                posInfo[slot].x = value / deviceX
+            elif op == const.ABS_MT_POSITION_Y:
+                posInfo[slot].y = value / deviceY
+            elif op == const.SYN_REPORT:
+                delay = stamp - lastStamp
+                lastStamp = stamp
+                self.minitouchEvents.append("sleep %f\n" % delay)
+                for idx, info in posInfo.iteritems():
+                    if not info.isChanged:
+                        continue
+                    if info.key == const.KEY_UP:
+                        info.key = const.KEY_NONE
+                        self.minitouchEvents.append("u %d\n" % idx)
+                    elif info.key == const.KEY_DOWN:
+                        info.key = const.KEY_NONE
+                        self.minitouchEvents.append(
+                            "d %d %f %f %d\n" % (
+                                idx, info.x, info.y, info.pressure))
+                    else:
+                        self.minitouchEvents.append(
+                            "m %d %f %f %d\n" % (
+                                idx, info.x, info.y, info.pressure))
+                    info.isChanged = False
+                self.minitouchEvents.append("c\n")
+        def tmp():
             if op == const.ABS_MT_TRACKING_ID:
                 if value == int("ffffffff", 16):
                     posInfo[slot].key = const.KEY_UP

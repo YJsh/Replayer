@@ -107,7 +107,7 @@ class DeviceMgr(object):
 
     def initDevices(self):
         stdout = subprocess.check_output("adb devices", shell=True)
-        pattern = re.compile(r"([\w\d\:\.]+)\s+device\s*$", re.M)
+        pattern = re.compile(r"([\w\d\:\.-]+)\s+device\s*$", re.M)
         result = pattern.findall(stdout)
         if not result:
             raise RuntimeError("Can not find avaliable device")
