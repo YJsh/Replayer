@@ -287,6 +287,8 @@ class ScriptWidget(QtGui.QWidget):
 
     def initDir(self):
         path = os.path.join(os.getcwd(), "testcase")
+        if not os.path.exists(path):
+            os.makedirs(path)
         self.chooseDir(path)
 
     def refresh(self):
