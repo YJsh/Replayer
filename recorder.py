@@ -122,8 +122,8 @@ class Recorder(threading.Thread):
             else:
                 value = int(value, 16)
 
-            if op == const.ABS_MT_TRACKING_ID:
-                if value == int("ffffffff", 16):
+            if op == const.BTN_TOUCH:
+                if value == 0:
                     posInfo[slot].key = const.KEY_UP
                 else:
                     posInfo[slot].key = const.KEY_DOWN
@@ -131,49 +131,20 @@ class Recorder(threading.Thread):
                 slot = value
                 if slot not in posInfo:
                     posInfo[slot] = SlotInfo()
-            elif op == const.ABS_MT_PRESSURE:
-                posInfo[slot].pressure = value
-            elif op == const.ABS_MT_POSITION_X:
-                posInfo[slot].x = value / deviceX
-            elif op == const.ABS_MT_POSITION_Y:
-                posInfo[slot].y = value / deviceY
-            elif op == const.SYN_REPORT:
-                delay = stamp - lastStamp
-                lastStamp = stamp
-                self.minitouchEvents.append("sleep %f\n" % delay)
-                for idx, info in posInfo.iteritems():
-                    if not info.isChanged:
-                        continue
-                    if info.key == const.KEY_UP:
-                        info.key = const.KEY_NONE
-                        self.minitouchEvents.append("u %d\n" % idx)
-                    elif info.key == const.KEY_DOWN:
-                        info.key = const.KEY_NONE
-                        self.minitouchEvents.append(
-                            "d %d %f %f %d\n" % (
-                                idx, info.x, info.y, info.pressure))
-                    else:
-                        self.minitouchEvents.append(
-                            "m %d %f %f %d\n" % (
-                                idx, info.x, info.y, info.pressure))
-                    info.isChanged = False
-                self.minitouchEvents.append("c\n")
-        def tmp():
-            if op == const.ABS_MT_TRACKING_ID:
+                    posInfo[slot].key = const.KEY_DOWN
+            elif op == const.ABS_MT_TRACKING_ID:
                 if value == int("ffffffff", 16):
                     posInfo[slot].key = const.KEY_UP
-                else:
-                    posInfo[slot].key = const.KEY_DOWN
-            elif op == const.ABS_MT_SLOT:
-                slot = value
-                if slot not in posInfo:
-                    posInfo[slot] = SlotInfo()
             elif op == const.ABS_MT_PRESSURE:
                 posInfo[slot].pressure = value
             elif op == const.ABS_MT_POSITION_X:
-                posInfo[slot].x = value / deviceX
+                x = value / deviceX
+                if x <= 1:
+                    posInfo[slot].x = x
             elif op == const.ABS_MT_POSITION_Y:
-                posInfo[slot].y = value / deviceY
+                y = value / deviceY
+                if y <= 1:
+                    posInfo[slot].y = y
             elif op == const.SYN_REPORT:
                 delay = stamp - lastStamp
                 lastStamp = stamp
