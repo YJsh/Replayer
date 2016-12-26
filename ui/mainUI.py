@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 from PyQt4 import QtCore, QtGui
 from device import DeviceMgr
@@ -32,8 +33,6 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(640, 480)
-        #  MainWindow.setWindowFlags(
-        #          QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
 
         self.centralWidget = QtGui.QWidget(MainWindow)
         self.centralWidget.setObjectName(_fromUtf8("centralwidget"))
@@ -53,9 +52,10 @@ class Ui_MainWindow(object):
         self.navigationLayout.addWidget(self.navigation)
 
         contextRect = QtCore.QRect(105, 0, 530, 480)
-        self.deviceWidget = DeviceWidget(self.centralWidget)
+        self.deviceMgr = DeviceMgr()
+        self.deviceWidget = DeviceWidget(self.deviceMgr, self.centralWidget)
         self.deviceWidget.setGeometry(contextRect)
-        self.scriptWidget = ScriptWidget(self.centralWidget)
+        self.scriptWidget = ScriptWidget(self.deviceMgr, self.centralWidget)
         self.scriptWidget.setGeometry(contextRect)
         self.scriptWidget.hide()
 
@@ -66,6 +66,7 @@ class Ui_MainWindow(object):
     def switch2ScriptPage(self):
         self.deviceWidget.hide()
         self.scriptWidget.show()
+        self.scriptWidget.refresh()
 
 
 class QNavigation(QtGui.QListWidget):
@@ -89,8 +90,10 @@ class QNavigation(QtGui.QListWidget):
 
 
 class DeviceWidget(QtGui.QWidget):
-    def __init__(self, parent=None):
+
+    def __init__(self, deviceMgr, parent=None):
         super(DeviceWidget, self).__init__(parent)
+        self.deviceMgr = deviceMgr
         self.deviceList = QtGui.QListWidget(self)
         self.deviceList.setObjectName(_fromUtf8("deviceList"))
         self.connectButton = QtGui.QPushButton(_fromUtf8("连接"), self)
@@ -163,7 +166,6 @@ class DeviceWidget(QtGui.QWidget):
         connect(self.replayButton, signal("clicked()"), self.doReplay)
 
     def initDevices(self):
-        self.deviceMgr = DeviceMgr()
         self.deviceMgr.initDevices()
         for device in self.deviceMgr.getAllDevices():
             self.insertDevice(device)
@@ -242,32 +244,128 @@ class DeviceWidget(QtGui.QWidget):
 
 class ScriptWidget(QtGui.QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, deviceMgr, parent=None):
         super(ScriptWidget, self).__init__(parent)
-        self.scriptLayout = QtGui.QHBoxLayout(self)
+        self.deviceMgr = deviceMgr
+        self.dirPushButton = QtGui.QPushButton(_fromUtf8("选择"), self)
+        self.dirPushButton.setObjectName(_fromUtf8("dirPushButton"))
+        self.dirLineEdit = QtGui.QLineEdit(self)
+        self.dirLineEdit.setObjectName(_fromUtf8("dirLineEdit"))
+        self.dirChooseLayout = QtGui.QHBoxLayout()
+        self.dirChooseLayout.setObjectName(_fromUtf8("dirChooseLayout"))
+        self.dirChooseLayout.addWidget(self.dirPushButton)
+        self.dirChooseLayout.addWidget(self.dirLineEdit)
+
+        self.fileListWidget = QtGui.QListWidget(self)
+        self.fileListWidget.setObjectName(_fromUtf8("fileListWidget"))
+
+        self.chooseButton = QtGui.QPushButton(_fromUtf8("设备选择"), self)
+        self.runButton = QtGui.QPushButton(_fromUtf8("执行"), self)
+
+        self.dirLayout = QtGui.QVBoxLayout()
+        self.dirLayout.addWidget(self.chooseButton)
+        self.dirLayout.addWidget(self.runButton)
+        self.dirLayout.addWidget(self.fileListWidget)
+        self.dirLayout.addLayout(self.dirChooseLayout)
 
         self.scriptWidget = QtGui.QListWidget(self)
         self.scriptWidget.setObjectName(_fromUtf8("scriptWidget"))
+
+        self.scriptLayout = QtGui.QHBoxLayout(self)
+        self.scriptLayout.addLayout(self.dirLayout)
         self.scriptLayout.addWidget(self.scriptWidget)
 
-        self.dirWidget = QtGui.QWidget(self)
-        self.dirWidget.setObjectName(_fromUtf8("dirWidget"))
-        self.dirWidget.setGeometry(QtCore.QRect(20, 190, 340, 220))
+        self.connectSignal()
+        self.initDir()
 
-        self.dirLayout = QtGui.QVBoxLayout(self.dirWidget)
-        self.fileListWidget = QtGui.QListWidget(self.dirWidget)
-        self.fileListWidget.setObjectName(_fromUtf8("fileListWidget"))
-        self.dirLayout.addWidget(self.fileListWidget)
+    def connectSignal(self):
+        connect(self.dirPushButton, signal("clicked()"), self.chooseDir)
+        connect(self.fileListWidget,
+                signal("itemSelectionChanged()"), self.chooseFile)
+        connect(self.runButton, signal("clicked()"), self.run)
+        connect(self.chooseButton, signal("clicked()"), self.chooseDevice)
 
-        self.dirChooseLayout = QtGui.QHBoxLayout()
-        self.dirChooseLayout.setObjectName(_fromUtf8("dirChooseLayout"))
-        self.dirPushButton = QtGui.QPushButton(self.dirWidget)
-        self.dirPushButton.setObjectName(_fromUtf8("dirPushButton"))
-        self.dirChooseLayout.addWidget(self.dirPushButton)
-        self.dirLineEdit = QtGui.QLineEdit(self.dirWidget)
-        self.dirLineEdit.setObjectName(_fromUtf8("dirLineEdit"))
-        self.dirChooseLayout.addWidget(self.dirLineEdit)
-        self.dirLayout.addLayout(self.dirChooseLayout)
+    def initDir(self):
+        path = os.path.join(os.getcwd(), "testcase")
+        self.chooseDir(path)
+
+    def refresh(self):
+        self.chooseDir(self.dirPath)
+
+    def chooseDir(self, dirPath=""):
+        self.dirPath = dirPath or QtGui.QFileDialog.getExistingDirectory()
+        print(self.dirPath)
+        if self.dirPath:
+            self.dirLineEdit.setText(self.dirPath)
+            self.showFileList(self.dirPath)
+
+    def showFileList(self, dirPath):
+        self.fileListWidget.clear()
+        for path in os.listdir(dirPath):
+            if os.path.isdir(path):
+                continue
+            if str(path).endswith(".script"):
+                item = QtGui.QListWidgetItem(path)
+                self.fileListWidget.addItem(item)
+
+    def chooseFile(self):
+        items = self.fileListWidget.selectedItems()
+        fileName = str(items[0].text())
+        self.handleContext(fileName)
+
+    def handleContext(self, fileName):
+        with open(os.path.join(str(self.dirLineEdit.text()), fileName)) as f:
+            context = f.read()
+        self.scriptWidget.clear()
+        for line in context.split("\n"):
+            item = QtGui.QListWidgetItem(line)
+            self.scriptWidget.addItem(item)
+
+    def chooseDevice(self):
+        boxNames = []
+        for device in self.deviceMgr.getAllDevices():
+            if device.deviceId:
+                boxNames.append(device.deviceId)
+        self.result = []
+        QCheckBoxList(boxNames, self.result, self).show()
+
+    def run(self):
+        events = []
+        for index in xrange(self.scriptWidget.count()):
+            events.append(str(self.scriptWidget.item(index).text()))
+        for deviceId in self.result:
+            device = self.deviceMgr.findDeviceById(deviceId)
+            replayer = Replayer(events, device)
+            replayer.start()
+
+
+class QCheckBoxList(QtGui.QDialog):
+
+    def __init__(self, boxNames, result, parent):
+        super(QCheckBoxList, self).__init__(parent)
+        self.boxNames = boxNames
+        self.result = result
+        self.boxes = []
+        self.button = QtGui.QPushButton(_fromUtf8("确定"), self)
+        self.layout = QtGui.QVBoxLayout(self)
+        self.initCheckBox()
+        self.layout.addWidget(self.button)
+        self.connectSignal()
+
+    def connectSignal(self):
+        connect(self.button, signal("clicked()"), self.getResult)
+
+    def initCheckBox(self):
+        for name in self.boxNames:
+            box = QtGui.QCheckBox(_fromUtf8(name), self)
+            self.layout.addWidget(box)
+            self.boxes.append(box)
+
+    def getResult(self):
+        for box in self.boxes:
+            if box.isChecked():
+                self.result.append(box.text())
+        self.close()
 
 
 def run():

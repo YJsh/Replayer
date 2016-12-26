@@ -21,7 +21,6 @@ class Device(object):
         if stdout.startswith("unable to connect to"):
             raise RuntimeError("connect failed")
         self.deviceId = "%s:%d" % self.deviceIp
-        #  self.getDeviceId()
         return True
 
     def getDeviceId(self):
@@ -81,6 +80,11 @@ class Device(object):
         if not self.deviceABI:
             self.getABI()
         print(self.deviceABI)
+        stdout = subprocess.check_output(
+                "adb -s %s shell ls /data/local/tmp/minitouch"
+                % self.deviceId, shell=True)
+        if "No such file or directory" not in stdout:
+            return
         subprocess.call("adb -s %s push libs/%s/minitouch /data/local/tmp/"
                         % (self.deviceId, self.deviceABI))
         subprocess.call("adb -s %s shell chmod 777 /data/local/tmp/minitouch"
