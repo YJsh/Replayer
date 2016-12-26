@@ -232,7 +232,8 @@ class DeviceWidget(QtGui.QWidget):
     def doSave(self):
         if not self.events:
             return
-        fileName = QtGui.QFileDialog.getSaveFileName(filter=".script")
+        fileName = QtGui.QFileDialog.getSaveFileName(
+                self, "", "testcase", filter=".script")
         if fileName:
             with open(str(fileName), "w") as f:
                 f.write("".join(self.events))
